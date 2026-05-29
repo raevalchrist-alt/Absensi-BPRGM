@@ -579,10 +579,6 @@
           <input type="text" id="inputNama" placeholder="Masukkan nama lengkap" autocomplete="name" />
         </div>
         <div class="field">
-          <label>ID / NIK Karyawan</label>
-          <input type="text" id="inputId" placeholder="Contoh: EMP-001" autocomplete="off" />
-        </div>
-        <div class="field">
           <label>Jenis Absensi</label>
           <select id="inputJenis">
             <option value="masuk">🟢 Masuk</option>
@@ -895,12 +891,12 @@
       ctx.drawImage(video, 0, 0);
 
       // Timestamp saat foto diambil (dari browser, tapi akan divalidasi server)
-      state.fotoTimestamp = new Date();
+      state.fotoTimestamp = Date.now();
 
       // ── WATERMARK / STAMP pada foto ──
       ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
       const stampText = [
-        `📅 ${state.fotoTimestamp.toLocaleString('id-ID')}`,
+        `📅 ${new Date(state.fotoTimestamp).toLocaleString('id-ID')}`,
         `👤 ${state.nama}`,
         `🔒 LIVE CAPTURE - SISTEM ABSENSI`
       ];
@@ -977,7 +973,7 @@
       let html = '';
       if (isFresh || ageSeconds === undefined) {
         html = `<div class="validation-row ok"><div class="dot"></div>✓ Foto diambil langsung (live capture)</div>`;
-        html += `<div class="validation-row ok"><div class="dot"></div>✓ Timestamp foto: ${state.fotoTimestamp ? state.fotoTimestamp.toLocaleTimeString('id-ID') : 'sekarang'}</div>`;
+        html += `<div class="validation-row ok"><div class="dot"></div>✓ Timestamp foto: ${state.fotoTimestamp ? new Date(state.fotoTimestamp).toLocaleTimeString('id-ID') : 'sekarang'}</div>`;
       } else {
         html = `<div class="validation-row err"><div class="dot"></div>⚠️ Foto ini berumur ${ageMin} menit - kemungkinan dari galeri</div>`;
       }
@@ -1431,7 +1427,7 @@
 
         // ── 3. Siapkan parameter template EmailJS ──
         //    Nama variable harus SAMA dengan yang ada di template EmailJS kamu
-        const lokasiStr = state.lokasi
+        const lokasiStrEmail = state.lokasi
           ? `${Number(state.lokasi.lat).toFixed(5)}, ${Number(state.lokasi.lng).toFixed(5)} (±${Math.round(state.lokasi.accuracy)}m)`
           : 'Tidak tersedia';
         const mapsUrl = state.lokasi
@@ -1453,7 +1449,6 @@
           : 'Tidak ada';
 
         // ── Photo Timestamp Validation ──
-        const photoAgeSeconds = (Date.now() - state.fotoTimestamp) / 1000;
         const photoAgeMinutes = Math.round(photoAgeSeconds / 60);
         const photoTimestampStatus = photoAgeSeconds <= 300 
           ? `✅ Foto fresh (${photoAgeMinutes} menit lalu)` 
@@ -1465,7 +1460,7 @@
           jenis_absensi     : jenisMap[state.jenisAbsensi] || state.jenisAbsensi.toUpperCase(),
           tanggal           : tglFormatted,
           jam               : jamFormatted + ' WIB',
-          lokasi            : lokasiStr,
+          lokasi            : lokasiStrEmail,
           maps_url          : mapsUrl,
           geo_status        : geoStatus,              // status geo-fence
           spoofing_status   : spoofStatus,            // status anti-spoofing browser
