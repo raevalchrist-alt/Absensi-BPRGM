@@ -1198,16 +1198,19 @@
           // ── Validasi ──
           let validationHtml = '';
           if (spoofCheck.warningLevel === 'danger') {
+            // HANYA spoofing yang benar-benar ditolak
             validationHtml = `<div class="validation-row err"><div class="dot"></div>🚨 ${spoofCheck.message} — Absensi DITOLAK</div>`;
             btnNext.disabled = true;
             showToast('🚨 Deteksi GPS spoofing! Absensi ditolak.');
           } else if (!geoCheck.inRadius) {
-            validationHtml = `<div class="validation-row warn"><div class="dot"></div>⚠️ ${geoCheck.message}</div>`;
+            // Di luar kantor — tetap BOLEH absen, tapi ada notifikasi
+            validationHtml = `<div class="validation-row warn"><div class="dot"></div>⚠️ ${geoCheck.message} — Lokasi akan dilaporkan ke HRD</div>`;
             if (spoofCheck.warningLevel === 'warn') {
               validationHtml += `<div class="validation-row warn"><div class="dot"></div>⚠️ ${spoofCheck.message}</div>`;
             }
-            btnNext.disabled = true;
-            showToast('⚠️ Anda di luar area kantor! Hubungi HRD jika ada alasan khusus.');
+            validationHtml += `<div class="validation-row warn"><div class="dot"></div>📋 Absensi luar kantor diizinkan — HRD akan menerima notifikasi lokasi Anda</div>`;
+            btnNext.disabled = false; // ← tetap bisa lanjut
+            showToast('📋 Lokasi di luar kantor dicatat. Tetap bisa absen.');
           } else {
             validationHtml = `<div class="validation-row ok"><div class="dot"></div>✓ ${geoCheck.message}</div>`;
             if (spoofCheck.warningLevel === 'warn') {
@@ -1435,7 +1438,17 @@
           : '-';
 
         // ── Tambah info geo-fencing ke email ──
-        const geoStatus = state.lokasi.geoStatus ? '✅ Dalam radius kantor' : '⚠️ Di luar radius kantor';
+        const distanceFromOffice = state.lokasi
+          ? calculateDistance(GEO_FENCE.lat, GEO_FENCE.lng, state.lokasi.lat, state.lokasi.lng)
+          : null;
+        const distanceLabel = distanceFromOffice !== null
+          ? distanceFromOffice < 1000
+            ? `${Math.round(distanceFromOffice)}m dari kantor`
+            : `${(distanceFromOffice / 1000).toFixed(1)}km dari kantor`
+          : '';
+        const geoStatus = state.lokasi.geoStatus
+          ? '✅ Dalam radius kantor'
+          : `🟠 KUNJUNGAN LUAR KANTOR — ${distanceLabel} — Lokasi GPS Asli Terverifikasi`;
         const spoofStatus = state.lokasi.spoofWarning === 'ok' ? '✅ GPS normal' : 
                            state.lokasi.spoofWarning === 'warn' ? '⚠️ Akurasi GPS jelek' :
                            '🚨 Terdeteksi spoofing';
@@ -1467,7 +1480,9 @@
           exif_gps          : exifGpsCoord,           // GPS dari EXIF metadata foto
           exif_verification : exifStatus,             // hasil validasi EXIF vs Browser GPS
           foto_base64       : fotoKecil,              // image dengan watermark
-          subject           : `[Absensi] ${state.nama} — ${jenisMap[state.jenisAbsensi] || state.jenisAbsensi.toUpperCase()} — ${jamFormatted}`
+          subject           : state.lokasi.geoStatus
+            ? `[Absensi] ${state.nama} — ${jenisMap[state.jenisAbsensi] || state.jenisAbsensi.toUpperCase()} — ${jamFormatted}`
+            : `[Absensi LUAR KANTOR] ${state.nama} — ${jenisMap[state.jenisAbsensi] || state.jenisAbsensi.toUpperCase()} — ${jamFormatted}`
         };
 
         // ── 4. Kirim via EmailJS ──
