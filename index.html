@@ -595,17 +595,15 @@
     <!-- SECTION 2: Foto -->
     <div class="section" id="sec2">
       <div class="card">
-        <div class="card-title">📸 Foto Absensi</div>
+        <div class="card-title">📸 Foto Absensi (Kamera Native HP)</div>
         <div class="camera-preview" id="cameraPreview">
-          <video id="videoEl" autoplay playsinline muted></video>
-          <canvas id="canvasEl"></canvas>
           <img id="fotoResult" alt="Foto absensi" />
 
-          <!-- Overlay saat belum ada kamera -->
+          <!-- Overlay saat belum ada foto -->
           <div class="camera-overlay" id="cameraOverlay">
             <div class="camera-placeholder">
               <span class="icon">📷</span>
-              <p>Kamera akan muncul<br>di sini</p>
+              <p>Tekan tombol di bawah<br>untuk ambil foto</p>
             </div>
           </div>
 
@@ -623,14 +621,14 @@
         <div id="fotoValidasi"></div>
 
         <div class="camera-actions">
-          <button class="btn btn-primary" id="btnKamera" onclick="startCamera()">
-            📷 Buka Kamera
-          </button>
-          <button class="btn btn-gold" id="btnAmbil" onclick="takePicture()" style="display:none;">
-            ⚡ Ambil Foto
+          <!-- Native camera input - opens phone camera directly -->
+          <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none;" onchange="handleNativeCamera(event)" />
+          
+          <button class="btn btn-primary" id="btnKamera" onclick="document.getElementById('fileInputCamera').click()">
+            📷 Buka Kamera HP
           </button>
           <button class="btn btn-danger" id="btnRetake" onclick="retakePhoto()" style="display:none;">
-            🔄 Ulangi
+            🔄 Ulangi Foto
           </button>
         </div>
 
@@ -852,149 +850,69 @@
     // ════════════════════════════════════════════
     //  KAMERA
     // ════════════════════════════════════════════
-    async function startCamera() {
-      const video = document.getElementById('videoEl');
-      const overlay = document.getElementById('cameraOverlay');
-
-      try {
-        const constraints = {
-          video: {
-            facingMode: 'user', // selfie camera
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        };
-        state.stream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = state.stream;
-        await video.play();
-        overlay.style.display = 'none';
-
-        document.getElementById('btnKamera').style.display = 'none';
-        document.getElementById('btnAmbil').style.display = 'flex';
-
-
-      } catch (err) {
-        console.error('Kamera error:', err);
-        // Kamera tidak tersedia
-        overlay.innerHTML = `
-          <div class="camera-placeholder">
-            <span class="icon">⚠️</span>
-            <p>Kamera tidak tersedia di perangkat ini</p>
-          </div>`;
-        showToast('Kamera tidak bisa diakses, gunakan alternatif');
-      }
-    }
-
-    function stopCamera() {
-      if (state.stream) {
-        state.stream.getTracks().forEach(t => t.stop());
-        state.stream = null;
-      }
-    }
-
-    async function takePicture() {
-      const video = document.getElementById('videoEl');
-      const canvas = document.getElementById('canvasEl');
-      const result = document.getElementById('fotoResult');
-      const meta = document.getElementById('fotoMeta');
-
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-
-      const ctx = canvas.getContext('2d');
-      // Balik horizontal karena video di-mirror
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, 0, 0);
-
-      // Timestamp saat foto diambil (dari browser, tapi akan divalidasi server)
-      state.fotoTimestamp = Date.now();
-
-      // ── WATERMARK / STAMP pada foto ──
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
-      const stampText = [
-        `📅 ${new Date(state.fotoTimestamp).toLocaleString('id-ID')}`,
-        `👤 ${state.nama}`,
-        `🔒 LIVE CAPTURE - SISTEM ABSENSI`
-      ];
-      const lineH = 22;
-      const stampH = stampText.length * lineH + 20;
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(0, canvas.height - stampH, canvas.width, stampH);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px monospace';
-      stampText.forEach((line, i) => {
-        ctx.fillText(line, 10, canvas.height - stampH + 18 + i * lineH);
-      });
-
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      state.fotoDataUrl = dataUrl;
-
-      // Tampilkan hasil
-      result.src = dataUrl;
-      result.style.display = 'block';
-      video.style.display = 'none';
-      stopCamera();
-
-      state.fotoTaken = true;
-      document.getElementById('btnAmbil').style.display = 'none';
-      document.getElementById('btnRetake').style.display = 'flex';
-      document.getElementById('btnNextFoto').disabled = false;
-
-      // ── Extract EXIF GPS dari foto (jika ada) ──
-      try {
-        state.exifGPS = await extractGPSFromEXIF(dataUrl);
-        if (state.exifGPS) {
-          showToast(`✓ Foto berhasil diambil! GPS metadata ditemukan.`);
-        } else {
-          showToast(`✓ Foto berhasil diambil. (Tidak ada GPS metadata — normal untuk foto dari browser)`);
-        }
-      } catch (err) {
-        console.error('EXIF extract error:', err);
-        showToast(`✓ Foto berhasil diambil. (EXIF read skip)`);
-      }
-
-      // Validasi
-      showFotoValidasi(true);
-
-    }
-
-    function retakePhoto() {
-      const video = document.getElementById('videoEl');
-      const result = document.getElementById('fotoResult');
-      result.style.display = 'none';
-      result.src = '';
-      video.style.display = 'block';
-      state.fotoTaken = false;
-      state.fotoDataUrl = null;
-      document.getElementById('fotoValidasi').innerHTML = '';
-      document.getElementById('btnRetake').style.display = 'none';
-      document.getElementById('btnNextFoto').disabled = true;
-      startCamera();
-    }
-
-    function handleFallbackPhoto(event) {
+    // ════════════════════════════════════════════
+    //  NATIVE CAMERA HANDLER
+    // ════════════════════════════════════════════
+    async function handleNativeCamera(event) {
       const file = event.target.files[0];
       if (!file) return;
 
-      // Validasi: cek apakah foto baru atau dari galeri
-      const fileAge = (Date.now() - file.lastModified) / 1000; // dalam detik
-      const isFresh = fileAge < 120; // fresh jika < 2 menit
+      const result = document.getElementById('fotoResult');
+      const overlay = document.getElementById('cameraOverlay');
 
       const reader = new FileReader();
-      reader.onload = function(e) {
-        const result = document.getElementById('fotoResult');
+      reader.onload = async function(e) {
+        // Set foto
+        state.fotoDataUrl = e.target.result;
+        state.fotoTimestamp = Date.now(); // Timestamp sekarang (waktu submit akan divalidasi)
+        state.fotoTaken = true;
+
+        // Tampilkan hasil
         result.src = e.target.result;
         result.style.display = 'block';
-        document.getElementById('videoEl').style.display = 'none';
-        state.fotoDataUrl = e.target.result;
-        state.fotoTaken = true;
-        state.fotoTimestamp = new Date(file.lastModified);
+        overlay.style.display = 'none';
+
+        document.getElementById('btnKamera').style.display = 'none';
         document.getElementById('btnRetake').style.display = 'flex';
         document.getElementById('btnNextFoto').disabled = false;
-        showFotoValidasi(isFresh, fileAge);
+
+        // ── Extract EXIF GPS dari foto ──
+        try {
+          state.exifGPS = await extractGPSFromEXIF(e.target.result);
+          if (state.exifGPS) {
+            showToast(`✓ Foto berhasil diambil! GPS metadata ditemukan.`);
+          } else {
+            showToast(`⚠️ Foto berhasil diambil, tapi TIDAK ada GPS metadata.`);
+          }
+        } catch (err) {
+          console.error('EXIF extract error:', err);
+          showToast(`⚠️ Foto berhasil diambil, EXIF read gagal.`);
+        }
+
+        // Validasi
+        showFotoValidasi(true);
       };
       reader.readAsDataURL(file);
+    }
+
+    function retakePhoto() {
+      const result = document.getElementById('fotoResult');
+      const overlay = document.getElementById('cameraOverlay');
+      
+      result.style.display = 'none';
+      result.src = '';
+      overlay.style.display = 'flex';
+      
+      state.fotoTaken = false;
+      state.fotoDataUrl = null;
+      state.exifGPS = null;
+      document.getElementById('fotoValidasi').innerHTML = '';
+      document.getElementById('btnKamera').style.display = 'flex';
+      document.getElementById('btnRetake').style.display = 'none';
+      document.getElementById('btnNextFoto').disabled = true;
+      
+      // Reset file input
+      document.getElementById('fileInputCamera').value = '';
     }
 
     function showFotoValidasi(isFresh, ageSeconds) {
@@ -1002,14 +920,15 @@
       const ageMin = ageSeconds ? Math.floor(ageSeconds / 60) : 0;
       let html = '';
       if (isFresh || ageSeconds === undefined) {
-        html = `<div class="validation-row ok"><div class="dot"></div>✓ Foto diambil langsung (live capture)</div>`;
-        html += `<div class="validation-row ok"><div class="dot"></div>✓ Timestamp foto: ${state.fotoTimestamp ? new Date(state.fotoTimestamp).toLocaleTimeString('id-ID') : 'sekarang'}</div>`;
+        html = `<div class="validation-row ok"><div class="dot"></div>✓ Foto dari kamera native HP</div>`;
+        html += `<div class="validation-row ok"><div class="dot"></div>✓ Waktu: ${state.fotoTimestamp ? new Date(state.fotoTimestamp).toLocaleTimeString('id-ID') : 'sekarang'}</div>`;
         
-        // Tambah status EXIF GPS
+        // Status EXIF GPS - WAJIB
         if (state.exifGPS) {
-          html += `<div class="validation-row ok"><div class="dot"></div>✓ GPS metadata ditemukan: ${state.exifGPS.lat.toFixed(5)}, ${state.exifGPS.lng.toFixed(5)}</div>`;
+          html += `<div class="validation-row ok"><div class="dot"></div>✅ GPS METADATA DITEMUKAN! ${state.exifGPS.lat.toFixed(5)}, ${state.exifGPS.lng.toFixed(5)}</div>`;
+          html += `<div class="validation-row ok"><div class="dot"></div>✓ Siap untuk verifikasi anti-spoofing</div>`;
         } else {
-          html += `<div class="validation-row warn"><div class="dot"></div>⚠️ Tidak ada GPS metadata (normal — foto dari browser akan pakai Browser GPS)</div>`;
+          html += `<div class="validation-row err"><div class="dot"></div>❌ TIDAK ADA GPS METADATA! Pastikan lokasi HP dalam mode HIGH ACCURACY atau GPS on. Ambil foto ulang.</div>`;
         }
       } else {
         html = `<div class="validation-row err"><div class="dot"></div>⚠️ Foto ini berumur ${ageMin} menit - kemungkinan dari galeri</div>`;
@@ -1595,11 +1514,9 @@
       document.getElementById('inputNama').value = '';
       document.getElementById('inputJenis').selectedIndex = 0;
       document.getElementById('fotoResult').style.display = 'none';
-      document.getElementById('videoEl').style.display = 'block';
       document.getElementById('fotoValidasi').innerHTML = '';
       document.getElementById('lokasiValidasi').innerHTML = '';
       document.getElementById('btnKamera').style.display = 'flex';
-      document.getElementById('btnAmbil').style.display = 'none';
       document.getElementById('btnRetake').style.display = 'none';
       document.getElementById('btnNextFoto').disabled = true;
       document.getElementById('btnNextLokasi').disabled = true;
@@ -1612,6 +1529,7 @@
         </div>`;
       document.getElementById('btnLokasi').disabled = false;
       document.getElementById('btnLokasi').innerHTML = '📍 Ambil Lokasi GPS';
+      document.getElementById('fileInputCamera').value = ''; // Reset file input
       goToStep(1);
     }
 
