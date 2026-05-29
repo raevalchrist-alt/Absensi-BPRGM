@@ -581,10 +581,11 @@
         <div class="field">
           <label>Jenis Absensi</label>
           <select id="inputJenis">
-            <option value="masuk">🟢 Masuk</option>
-            <option value="keluar">🔴 Keluar</option>
-            <option value="lembur">🟡 Lembur</option>
-          </select>
+  <option value="masuk">🟢 Masuk</option>
+  <option value="keluar">🔴 Keluar</option>
+  <option value="lembur">🟡 Lembur</option>
+  <option value="kunjungan">🔵 Kunjungan Nasabah</option> <!-- Tambahan baru -->
+</select>
         </div>
       </div>
       <button class="btn btn-primary" onclick="nextStep(1)" style="width:100%;padding:16px;font-size:15px;">
@@ -928,8 +929,8 @@
           html += `<div class="validation-row ok"><div class="dot"></div>✅ GPS METADATA DITEMUKAN! ${state.exifGPS.lat.toFixed(5)}, ${state.exifGPS.lng.toFixed(5)}</div>`;
           html += `<div class="validation-row ok"><div class="dot"></div>✓ Siap untuk verifikasi anti-spoofing</div>`;
         } else {
-          html += `<div class="validation-row err"><div class="dot"></div>❌ TIDAK ADA GPS METADATA! Pastikan lokasi HP dalam mode HIGH ACCURACY atau GPS on. Ambil foto ulang.</div>`;
-        }
+  html += `<div class="validation-row warn"><div class="dot"></div>⚠️ GPS Metadata (EXIF) tidak ditemukan dari kamera. Lokasi akan diverifikasi via GPS Browser di tahap selanjutnya.</div>`;
+}
       } else {
         html = `<div class="validation-row err"><div class="dot"></div>⚠️ Foto ini berumur ${ageMin} menit - kemungkinan dari galeri</div>`;
       }
@@ -1364,23 +1365,27 @@
         }
 
         // ── 3. Validasi EXIF GPS vs Browser GPS (Anti Mock GPS) ──
-        // WAJIB ada EXIF GPS untuk verifikasi lokasi yang ketat
-        if (!state.exifGPS) {
-          showToast('⚠️ Foto tidak memiliki GPS metadata. Gunakan kamera HP yang punya GPS, bukan browser. Ambil foto ulang.');
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = '<span>Kirim Absensi</span><span>📤</span>';
-          return;
-        }
-
-        // Validasi EXIF GPS vs Browser GPS
-        state.gpsMatch = validateGPSMatch(state.exifGPS, state.lokasi);
-        
-        if (state.gpsMatch.severity === 'danger') {
-          showToast('🚨 GPS SPOOFING TERDETEKSI! Foto GPS tidak match dengan lokasi device. Absensi DITOLAK.');
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = '<span>Kirim Absensi</span><span>📤</span>';
-          return;
-        }
+        // Cek EXIF GPS (Sekarang opsional, tidak lagi memblokir absensi jika kosong)
+if (state.exifGPS) {
+  // Validasi EXIF GPS vs Browser GPS (JIKA EXIF ADA)
+if (state.exifGPS) {
+  state.gpsMatch = validateGPSMatch(state.exifGPS, state.lokasi);
+  
+  if (state.gpsMatch.severity === 'danger') {
+    showToast('🚨 GPS SPOOFING TERDETEKSI! Foto GPS tidak match dengan lokasi device. Absensi DITOLAK.');
+    btnSubmit.disabled = false;
+    btnSubmit.innerHTML = '<span>Kirim Absensi</span><span>📤</span>';
+    return;
+  }
+} else {
+  // Jika EXIF kosong, kita bypass pengecekan match, keamanan tetap dijaga oleh Geo-Fence dan Anti-Spoofing GPS Browser
+  state.gpsMatch = { severity: 'warn', warning: 'EXIF tidak tersedia, verifikasi via GPS HP' };
+}
+} else {
+  // Jika EXIF kosong (karena privasi browser/HP), bypass pencocokan foto.
+  // Keamanan tetap aman karena dijaga oleh Geo-Fence dan Anti-Spoofing GPS bawaan HP di tahap berikutnya.
+  state.gpsMatch = { severity: 'warn', warning: 'EXIF tidak tersedia, verifikasi penuh menggunakan GPS HP' };
+}
 
         // ── 4. Tambah watermark ke foto (nama, jam, tanggal, lokasi) ──
         // Gunakan EXIF GPS yang sudah divalidasi
