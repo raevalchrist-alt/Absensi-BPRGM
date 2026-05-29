@@ -672,6 +672,17 @@
     <!-- SECTION 4: Konfirmasi & Kirim -->
     <div class="section" id="sec4">
       <div class="card">
+        <div class="card-title">📧 Email Tujuan HRD</div>
+        <div class="field">
+          <label>Email HRD / Atasan</label>
+          <input type="email" id="inputEmail" placeholder="hrd@perusahaan.com" inputmode="email" autocomplete="email" value="bgraciamandiri@gmail.com" style="width:100%;padding:13px 16px;border:1.5px solid #e8e0d5;border-radius:8px;font-family:DM Sans,sans-serif;font-size:15px;color:#1c1c1c;background:#faf6f0;outline:none;" />
+          <small style="color:var(--text-muted);font-size:11px;margin-top:4px;display:block;">
+            Laporan absensi + foto akan dikirim otomatis ke email ini. Gratis, tanpa server.
+          </small>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title">✅ Ringkasan Absensi</div>
         <div id="summaryContent"></div>
       </div>
@@ -914,11 +925,16 @@
       document.getElementById('btnNextFoto').disabled = false;
 
       // ── Extract EXIF GPS dari foto (jika ada) ──
-      state.exifGPS = await extractGPSFromEXIF(dataUrl);
-      if (state.exifGPS) {
-        showToast(`✓ Foto berhasil diambil! GPS metadata ditemukan.`);
-      } else {
-        showToast(`✓ Foto berhasil diambil. (Tidak ada GPS metadata — normal untuk foto dari browser)`);
+      try {
+        state.exifGPS = await extractGPSFromEXIF(dataUrl);
+        if (state.exifGPS) {
+          showToast(`✓ Foto berhasil diambil! GPS metadata ditemukan.`);
+        } else {
+          showToast(`✓ Foto berhasil diambil. (Tidak ada GPS metadata — normal untuk foto dari browser)`);
+        }
+      } catch (err) {
+        console.error('EXIF extract error:', err);
+        showToast(`✓ Foto berhasil diambil. (EXIF read skip)`);
       }
 
       // Validasi
@@ -993,43 +1009,53 @@
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-          EXIF.getData(img, function() {
-            const lat = EXIF.getTag(this, "GPSLatitude");
-            const lng = EXIF.getTag(this, "GPSLongitude");
-            const latRef = EXIF.getTag(this, "GPSLatitudeRef");   // N/S
-            const lngRef = EXIF.getTag(this, "GPSLongitudeRef");  // E/W
-            const timestamp = EXIF.getTag(this, "DateTime");
+          try {
+            EXIF.getData(img, function() {
+              try {
+                const lat = EXIF.getTag(this, "GPSLatitude");
+                const lng = EXIF.getTag(this, "GPSLongitude");
+                const latRef = EXIF.getTag(this, "GPSLatitudeRef");   // N/S
+                const lngRef = EXIF.getTag(this, "GPSLongitudeRef");  // E/W
+                const timestamp = EXIF.getTag(this, "DateTime");
 
-            if (!lat || !lng) {
-              resolve(null);
-              return;
-            }
+                if (!lat || !lng) {
+                  resolve(null);
+                  return;
+                }
 
-            // Convert DMS (Degrees, Minutes, Seconds) to decimal
-            const dmsToDecimal = (dms, ref) => {
-              if (!Array.isArray(dms)) return null;
-              const degrees = dms[0].numerator / dms[0].denominator;
-              const minutes = dms[1].numerator / dms[1].denominator;
-              const seconds = dms[2].numerator / dms[2].denominator;
-              let decimal = degrees + minutes / 60 + seconds / 3600;
-              if (ref === 'S' || ref === 'W') decimal *= -1;
-              return decimal;
-            };
+                // Convert DMS (Degrees, Minutes, Seconds) to decimal
+                const dmsToDecimal = (dms, ref) => {
+                  if (!Array.isArray(dms)) return null;
+                  const degrees = dms[0].numerator / dms[0].denominator;
+                  const minutes = dms[1].numerator / dms[1].denominator;
+                  const seconds = dms[2].numerator / dms[2].denominator;
+                  let decimal = degrees + minutes / 60 + seconds / 3600;
+                  if (ref === 'S' || ref === 'W') decimal *= -1;
+                  return decimal;
+                };
 
-            const latDec = dmsToDecimal(lat, latRef);
-            const lngDec = dmsToDecimal(lng, lngRef);
+                const latDec = dmsToDecimal(lat, latRef);
+                const lngDec = dmsToDecimal(lng, lngRef);
 
-            if (latDec && lngDec) {
-              resolve({
-                lat: latDec,
-                lng: lngDec,
-                timestamp: timestamp,
-                hasEXIF: true
-              });
-            } else {
-              resolve(null);
-            }
-          });
+                if (latDec && lngDec) {
+                  resolve({
+                    lat: latDec,
+                    lng: lngDec,
+                    timestamp: timestamp,
+                    hasEXIF: true
+                  });
+                } else {
+                  resolve(null);
+                }
+              } catch (e) {
+                console.log('EXIF parse error:', e);
+                resolve(null);
+              }
+            });
+          } catch (e) {
+            console.log('EXIF getData error:', e);
+            resolve(null);
+          }
         };
         img.onerror = () => resolve(null);
         img.src = imageDataUrl;
@@ -1355,7 +1381,10 @@
     }
 
     async function submitAbsensi() {
-      const emailInput = 'bgraciamandiri@gmail.com'; // Email HRD hardcoded
+      const emailInput = document.getElementById('inputEmail').value.trim();
+      if (!emailInput || !emailInput.includes('@')) {
+        showToast('⚠️ Masukkan email HRD yang valid'); return;
+      }
       if (EJS_PUBLIC_KEY === 'GANTI_PUBLIC_KEY_KAMU') {
         showToast('⚠️ EmailJS belum dikonfigurasi di index.html'); return;
       }
