@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Panduan Setup EmailJS — Absensi PWA</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; margin: 0; padding: 24px; color: #1c1c1c; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  h1 { color: #0f4c35; font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+  .step-card {
+    background: white; border-radius: 12px; padding: 24px;
+    margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    border-left: 4px solid #0f4c35;
+  }
+  .step-num {
+    display: inline-block; background: #0f4c35; color: white;
+    border-radius: 50%; width: 28px; height: 28px;
+    text-align: center; line-height: 28px; font-weight: bold;
+    font-size: 13px; margin-bottom: 10px;
+  }
+  h2 { font-size: 17px; margin: 0 0 12px; color: #0f4c35; }
+  p, li { font-size: 14px; line-height: 1.7; color: #333; margin: 0 0 8px; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  code {
+    background: #f0f0f0; padding: 2px 7px; border-radius: 4px;
+    font-family: monospace; font-size: 13px; color: #c0392b;
+  }
+  .code-block {
+    background: #1c1c1c; color: #e8e8e8; padding: 16px 20px;
+    border-radius: 8px; font-family: monospace; font-size: 13px;
+    line-height: 1.6; overflow-x: auto; margin: 12px 0;
+  }
+  .code-block .comment { color: #7ec8a0; }
+  .code-block .key { color: #f7c948; }
+  .code-block .val { color: #78bffc; }
+  .highlight {
+    background: #fff8e7; border: 1px solid #f7c948;
+    border-radius: 8px; padding: 12px 16px; margin: 12px 0;
+    font-size: 13px;
+  }
+  .template-box {
+    background: #f8f8f8; border: 1px dashed #ccc;
+    border-radius: 8px; padding: 16px; font-family: monospace;
+    font-size: 13px; line-height: 1.7; white-space: pre-wrap;
+    margin: 12px 0;
+  }
+  .badge {
+    display: inline-block; background: #edfbf3; color: #27ae60;
+    padding: 3px 10px; border-radius: 20px; font-size: 12px;
+    font-weight: 600; margin-left: 8px;
+  }
+  .img-tip { color: #888; font-size: 12px; font-style: italic; }
+  a { color: #0f4c35; }
+  .final-card {
+    background: #0f4c35; color: white; border-radius: 12px;
+    padding: 24px; margin-top: 8px; text-align: center;
+  }
+  .final-card h2 { color: white; }
+  .final-card p { color: rgba(255,255,255,.8); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>📧 Panduan Setup EmailJS</h1>
+  <p class="subtitle">Agar foto absensi terkirim otomatis ke email HRD — <strong>100% gratis, tanpa server</strong></p>
+
+  <!-- STEP 1 -->
+  <div class="step-card">
+    <div class="step-num">1</div>
+    <h2>Daftar Akun EmailJS <span class="badge">Gratis</span></h2>
+    <p>Buka <a href="https://www.emailjs.com" target="_blank"><strong>emailjs.com</strong></a> → klik <strong>Sign Up Free</strong></p>
+    <ul>
+      <li>Daftar pakai Google atau email biasa</li>
+      <li>Plan gratis: <strong>200 email/bulan</strong> — cukup untuk ~6-7 karyawan absensi 2x/hari</li>
+      <li>Tidak butuh kartu kredit</li>
+    </ul>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step-card">
+    <div class="step-num">2</div>
+    <h2>Tambah Email Service (Gmail)</h2>
+    <p>Setelah login → klik <strong>Email Services</strong> di sidebar → <strong>Add New Service</strong></p>
+    <ul>
+      <li>Pilih <strong>Gmail</strong></li>
+      <li>Klik <strong>Connect Account</strong> → login dengan akun Gmail HRD</li>
+      <li>Beri nama service, misal: <code>absensi_kantor</code></li>
+      <li>Klik <strong>Create Service</strong></li>
+      <li>Catat <strong>Service ID</strong> yang muncul (contoh: <code>service_abc123</code>)</li>
+    </ul>
+    <div class="highlight">
+      ⚠️ Gunakan Gmail khusus/dummy untuk server, bukan akun Gmail pribadi HRD.
+      Email <em>dari</em>-nya akan jadi akun ini.
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step-card">
+    <div class="step-num">3</div>
+    <h2>Buat Template Email</h2>
+    <p>Klik <strong>Email Templates</strong> → <strong>Create New Template</strong></p>
+    <p>Isi template seperti berikut (copy-paste langsung):</p>
+
+    <p><strong>Subject:</strong></p>
+    <div class="code-block">{{subject}}</div>
+
+    <p><strong>Body (HTML):</strong></p>
+    <p style="font-size:13px;color:#27ae60;font-weight:600">
+      ✅ Foto hanya dari live camera (tidak ada opsi upload) — menjamin autentisitas
+    </p>
+    <p style="font-size:13px;color:#666;font-style:italic">
+      💡 Fitur keamanan:
+    </p>
+    <ul style="font-size:12px;color:#555;margin:8px 0">
+      <li>✅ Watermark: nama, waktu (jam/tanggal), lokasi GPS tercetak di foto</li>
+      <li>✅ EXIF GPS Verification: validasi foto GPS vs device GPS (cegah mock GPS)</li>
+      <li>✅ Geo-Fence: pastikan absensi hanya di wilayah kantor</li>
+      <li>✅ Anti-Spoofing: deteksi akurasi GPS aneh dan kecepatan impossible</li>
+    </ul>
+    <div class="template-box">&#x3C;div style="font-family:sans-serif;max-width:520px;margin:0 auto"&#x3E;
+  &#x3C;div style="background:#0f4c35;padding:20px 24px;border-radius:12px 12px 0 0"&#x3E;
+    &#x3C;h2 style="color:white;margin:0;font-size:20px"&#x3E;&#x1F4CB; Laporan Absensi Karyawan&#x3C;/h2&#x3E;
+  &#x3C;/div&#x3E;
+  &#x3C;div style="background:white;padding:24px;border:1px solid #e0e0e0;border-top:none"&#x3E;
+    &#x3C;table style="width:100%;border-collapse:collapse;font-size:14px"&#x3E;
+      &#x3C;tr&#x3E;&#x3C;td style="padding:8px 0;color:#666;width:130px"&#x3E;Nama&#x3C;/td&#x3E;
+          &#x3C;td style="padding:8px 0;font-weight:600"&#x3E;{{nama}}&#x3C;/td&#x3E;&#x3C;/tr&#x3E;
+      &#x3C;tr&#x3E;&#x3C;td style="padding:8px 0;color:#666"&#x3E;Jenis&#x3C;/td&#x3E;
+          &#x3C;td style="padding:8px 0;font-weight:600"&#x3E;{{jenis_absensi}}&#x3C;/td&#x3E;&#x3C;/tr&#x3E;
+      &#x3C;tr&#x3E;&#x3C;td style="padding:8px 0;color:#666"&#x3E;Tanggal&#x3C;/td&#x3E;
+          &#x3C;td style="padding:8px 0"&#x3E;{{tanggal}}&#x3C;/td&#x3E;&#x3C;/tr&#x3E;
+      &#x3C;tr&#x3E;&#x3C;td style="padding:8px 0;color:#666"&#x3E;Jam&#x3C;/td&#x3E;
+          &#x3C;td style="padding:8px 0"&#x3E;{{jam}}&#x3C;/td&#x3E;&#x3C;/tr&#x3E;
+      &#x3C;tr&#x3E;&#x3C;td style="padding:8px 0;color:#666"&#x3E;Lokasi GPS&#x3C;/td&#x3E;
+          &#x3C;td style="padding:8px 0"&#x3E;{{lokasi}}&#x3C;/td&#x3E;&#x3C;/tr&#x3E;
+      &#x3C;tr&#x3E;&#x3C;td style="padding:8px 0;color:#666"&#x3E;Google Maps&#x3C;/td&#x3E;
+          &#x3C;td style="padding:8px 0"&#x3E;&#x3C;a href="{{maps_url}}"&#x3E;Buka Maps&#x3C;/a&#x3E;&#x3C;/td&#x3E;&#x3C;/tr&#x3E;
+    &#x3C;/table&#x3E;
+    &#x3C;hr style="border:none;border-top:1px solid #eee;margin:16px 0"&#x3E;
+    &#x3C;p style="font-size:13px;color:#666;margin:0 0 12px"&#x3E;&#x1F4F8; Foto Live Capture:&#x3C;/p&#x3E;
+    &#x3C;img src="{{foto_base64}}" alt="Foto Absensi"
+         style="width:100%;max-width:480px;border-radius:8px;border:1px solid #eee"&#x3E;
+    &#x3C;p style="font-size:11px;color:#aaa;margin-top:16px"&#x3E;
+      &#x2705; Live capture &#x2014; Timestamp diverifikasi server &#x2014; Dikirim otomatis oleh Absensi PWA
+    &#x3C;/p&#x3E;
+  &#x3C;/div&#x3E;
+&#x3C;/div&#x3E;</div>
+
+    <p><strong>To Email:</strong> isi dengan <code>{{to_email}}</code></p>
+    <p>Klik <strong>Save</strong> → catat <strong>Template ID</strong> (contoh: <code>template_xyz789</code>)</p>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step-card">
+    <div class="step-num">4</div>
+    <h2>Ambil Public Key</h2>
+    <p>Klik nama akun di pojok kanan atas → <strong>Account</strong> → tab <strong>General</strong></p>
+    <p>Copy nilai <strong>Public Key</strong> (contoh: <code>aBcDeFgHiJkLmNoP</code>)</p>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step-card">
+    <div class="step-num">5</div>
+    <h2>Isi di index.html</h2>
+    <p>Buka <code>index.html</code>, cari bagian ini dan isi 3 nilai:</p>
+    <div class="code-block"><span class="comment">// KONFIGURASI EMAILJS — ISI 3 NILAI INI</span>
+<span class="key">const EJS_PUBLIC_KEY</span>  = <span class="val">'aBcDeFgHiJkLmNoP'</span>;   <span class="comment">// dari Account > API Keys</span>
+<span class="key">const EJS_SERVICE_ID</span>  = <span class="val">'service_abc123'</span>;   <span class="comment">// dari Email Services</span>
+<span class="key">const EJS_TEMPLATE_ID</span> = <span class="val">'template_xyz789'</span>;  <span class="comment">// dari Email Templates</span></div>
+    <p>Simpan → push ke GitHub → selesai! ✅</p>
+  </div>
+
+  <!-- Info limit -->
+  <div class="step-card" style="border-left-color:#c9923a">
+    <h2 style="color:#c9923a">📊 Kapasitas Plan Gratis</h2>
+    <ul>
+      <li><strong>200 email/bulan</strong> gratis — cukup untuk ~10 karyawan (2x absensi/hari × 22 hari kerja = 440, <em>kurang</em>)</li>
+      <li>Jika karyawan lebih dari 3-4 orang, upgrade ke plan <strong>Personal Rp 50rb/bln</strong> (1.000 email/bln)</li>
+      <li>Atau: buat <strong>2-3 akun EmailJS</strong> berbeda dan rotasi (masing-masing 200/bln = 600/bln total)</li>
+      <li>Alternatif lain: pakai <strong>Resend.com</strong> (3.000 email/bln gratis) — butuh domain sendiri</li>
+    </ul>
+  </div>
+
+  <div class="final-card">
+    <h2>🎉 Selesai! Tanpa Bayar Server</h2>
+    <p>Karyawan foto → klik Kirim → email + foto langsung masuk ke inbox HRD.<br>
+    Tidak perlu VPS, tidak perlu backend, tidak perlu bayar apapun.</p>
+  </div>
+
+</div>
+</body>
+</html>
