@@ -817,13 +817,13 @@
       }
       if (from === 4) { /* submit handled by submitAbsensi */ return; }
 
-      stopCamera();
+      // Native camera tidak perlu di-stop (bukan browser camera)
       goToStep(from + 1);
       if (from + 1 === 4) buildSummary();
     }
 
     function prevStep(from) {
-      if (from === 2) stopCamera();
+      // Native camera tidak perlu di-stop
       goToStep(from - 1);
     }
 
