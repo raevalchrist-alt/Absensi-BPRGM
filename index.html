@@ -672,17 +672,6 @@
     <!-- SECTION 4: Konfirmasi & Kirim -->
     <div class="section" id="sec4">
       <div class="card">
-        <div class="card-title">📧 Email Tujuan HRD</div>
-        <div class="field">
-          <label>Email HRD / Atasan</label>
-          <input type="email" id="inputEmail" placeholder="hrd@perusahaan.com" inputmode="email" autocomplete="email" style="width:100%;padding:13px 16px;border:1.5px solid #e8e0d5;border-radius:8px;font-family:DM Sans,sans-serif;font-size:15px;color:#1c1c1c;background:#faf6f0;outline:none;" />
-          <small style="color:var(--text-muted);font-size:11px;margin-top:4px;display:block;">
-            Laporan absensi + foto akan dikirim otomatis ke email ini. Gratis, tanpa server.
-          </small>
-        </div>
-      </div>
-
-      <div class="card">
         <div class="card-title">✅ Ringkasan Absensi</div>
         <div id="summaryContent"></div>
       </div>
@@ -924,9 +913,17 @@
       document.getElementById('btnRetake').style.display = 'flex';
       document.getElementById('btnNextFoto').disabled = false;
 
+      // ── Extract EXIF GPS dari foto (jika ada) ──
+      state.exifGPS = await extractGPSFromEXIF(dataUrl);
+      if (state.exifGPS) {
+        showToast(`✓ Foto berhasil diambil! GPS metadata ditemukan.`);
+      } else {
+        showToast(`✓ Foto berhasil diambil. (Tidak ada GPS metadata — normal untuk foto dari browser)`);
+      }
+
       // Validasi
       showFotoValidasi(true);
-      showToast('✓ Foto berhasil diambil!');
+
     }
 
     function retakePhoto() {
@@ -974,8 +971,16 @@
       if (isFresh || ageSeconds === undefined) {
         html = `<div class="validation-row ok"><div class="dot"></div>✓ Foto diambil langsung (live capture)</div>`;
         html += `<div class="validation-row ok"><div class="dot"></div>✓ Timestamp foto: ${state.fotoTimestamp ? new Date(state.fotoTimestamp).toLocaleTimeString('id-ID') : 'sekarang'}</div>`;
+        
+        // Tambah status EXIF GPS
+        if (state.exifGPS) {
+          html += `<div class="validation-row ok"><div class="dot"></div>✓ GPS metadata ditemukan: ${state.exifGPS.lat.toFixed(5)}, ${state.exifGPS.lng.toFixed(5)}</div>`;
+        } else {
+          html += `<div class="validation-row warn"><div class="dot"></div>⚠️ Tidak ada GPS metadata (normal — foto dari browser akan pakai Browser GPS)</div>`;
+        }
       } else {
         html = `<div class="validation-row err"><div class="dot"></div>⚠️ Foto ini berumur ${ageMin} menit - kemungkinan dari galeri</div>`;
+      }
       }
       container.innerHTML = html;
     }
@@ -1350,10 +1355,7 @@
     }
 
     async function submitAbsensi() {
-      const emailInput = document.getElementById('inputEmail').value.trim();
-      if (!emailInput || !emailInput.includes('@')) {
-        showToast('⚠️ Masukkan email HRD yang valid'); return;
-      }
+      const emailInput = 'bgraciamandiri@gmail.com'; // Email HRD hardcoded
       if (EJS_PUBLIC_KEY === 'GANTI_PUBLIC_KEY_KAMU') {
         showToast('⚠️ EmailJS belum dikonfigurasi di index.html'); return;
       }
@@ -1398,8 +1400,9 @@
         }
 
         // ── 3. Validasi EXIF GPS vs Browser GPS (Anti Mock GPS) ──
+        // WAJIB ada EXIF GPS untuk verifikasi lokasi yang ketat
         if (!state.exifGPS) {
-          showToast('⚠️ Foto tidak punya GPS metadata — tidak bisa diverifikasi. Coba ambil foto ulang.');
+          showToast('⚠️ Foto tidak memiliki GPS metadata. Gunakan kamera HP yang punya GPS, bukan browser. Ambil foto ulang.');
           btnSubmit.disabled = false;
           btnSubmit.innerHTML = '<span>Kirim Absensi</span><span>📤</span>';
           return;
@@ -1416,7 +1419,8 @@
         }
 
         // ── 4. Tambah watermark ke foto (nama, jam, tanggal, lokasi) ──
-        const lokasiStr = state.lokasi
+        // Gunakan EXIF GPS yang sudah divalidasi
+        const lokasiStr = state.exifGPS
           ? `GPS: ${Number(state.exifGPS.lat).toFixed(5)}, ${Number(state.exifGPS.lng).toFixed(5)}`
           : 'GPS: tidak tersedia';
         const fotoDeganWatermark = await addWatermarkToFoto(state.fotoDataUrl, {
@@ -1454,9 +1458,9 @@
                            '🚨 Terdeteksi spoofing';
 
         // ── EXIF GPS Verification ──
-        const exifStatus = state.gpsMatch.severity === 'ok' ? '✅ EXIF GPS valid (match dengan photo)' :
-                          state.gpsMatch.severity === 'warn' ? '⚠️ ' + state.gpsMatch.warning :
-                          '🚨 ' + state.gpsMatch.warning;
+        const exifStatus = state.gpsMatch.severity === 'ok' ? '✅ EXIF GPS valid (match dengan lokasi device)'
+          : state.gpsMatch.severity === 'warn' ? '⚠️ ' + state.gpsMatch.warning
+          : '🚨 ' + state.gpsMatch.warning;
         const exifGpsCoord = state.exifGPS 
           ? `${Number(state.exifGPS.lat).toFixed(5)}, ${Number(state.exifGPS.lng).toFixed(5)}`
           : 'Tidak ada';
