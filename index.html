@@ -1254,35 +1254,46 @@
           // Hitung skala font agar proporsional dengan besarnya resolusi foto
           const scale = canvas.width / 500; 
           
-          // Gradient overlay di bawah yang lebih tinggi & pekat
-          const overlayH = 130 * scale;
+          // Hitung ukuran font proporsional berdasarkan persentase lebar foto
+          const nameFontSize = Math.floor(canvas.width * 0.06);   // Nama = 6% dari lebar foto
+          const detailFontSize = Math.floor(canvas.width * 0.04); // Detail = 4% dari lebar foto
+          const badgeFontSize = Math.floor(canvas.width * 0.03);  // Badge = 3% dari lebar foto
+          
+          // Gradient overlay di bawah (ditinggikan menjadi 25% dari tinggi foto agar teks muat)
+          const overlayH = Math.floor(canvas.height * 0.25); 
           const grad = ctx.createLinearGradient(0, canvas.height - overlayH, 0, canvas.height);
           grad.addColorStop(0, 'rgba(0,0,0,0)');
-          grad.addColorStop(1, 'rgba(0,0,0,0.9)');
+          grad.addColorStop(0.3, 'rgba(0,0,0,0.7)');
+          grad.addColorStop(1, 'rgba(0,0,0,0.95)');
           ctx.fillStyle = grad;
           ctx.fillRect(0, canvas.height - overlayH, canvas.width, overlayH);
 
-          // Tulis text dengan ukuran yang sudah dikali skala
+          // Tulis text
           ctx.fillStyle = '#fff';
           ctx.textAlign = 'left';
-          const leftPad = 20 * scale;
-          const topY = canvas.height - (95 * scale);
-          const spacing = 24 * scale;
+          const leftPad = Math.floor(canvas.width * 0.04); // Margin kiri 4%
+          const spacing = Math.floor(detailFontSize * 1.5);
+          
+          // Kalkulasi Posisi Y (diurutkan dari bawah ke atas agar rapi)
+          const yLokasi = canvas.height - (leftPad * 1.2);
+          const yTgl = yLokasi - spacing;
+          const yJenis = yTgl - spacing;
+          const yNama = yJenis - (spacing * 1.3);
 
-          ctx.font = `bold ${24 * scale}px sans-serif`;
-          ctx.fillText(lines[0], leftPad, topY);                 // nama
+          // Render Teks ke dalam foto
+          ctx.font = `bold ${nameFontSize}px sans-serif`;
+          ctx.fillText(lines[0], leftPad, yNama);           // Nama Karyawan
 
-          ctx.font = `${18 * scale}px sans-serif`;
-          ctx.fillText(lines[1], leftPad, topY + spacing);       // jenis + jam
-          ctx.fillText(lines[2], leftPad, topY + (spacing * 2)); // tgl
-          ctx.fillText(lines[3], leftPad, topY + (spacing * 3)); // lokasi
+          ctx.font = `${detailFontSize}px sans-serif`;
+          ctx.fillText(lines[1], leftPad, yJenis);          // Jenis & Jam
+          ctx.fillText(lines[2], leftPad, yTgl);            // Tanggal
+          ctx.fillText(lines[3], leftPad, yLokasi);         // Lokasi GPS
 
-          // Logo/badge di pojok kanan bawah
-          ctx.font = `bold ${14 * scale}px sans-serif`;
-          ctx.fillStyle = 'rgba(255,255,255,0.8)';
+          // Logo/badge "Live Capture" di pojok kanan bawah
+          ctx.font = `bold ${badgeFontSize}px sans-serif`;
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
           ctx.textAlign = 'right';
-          ctx.fillText('✓ Live Capture', canvas.width - (16 * scale), canvas.height - (16 * scale));
-
+          ctx.fillText('✓ Live Capture', canvas.width - leftPad, canvas.height - leftPad);
           resolve(canvas.toDataURL('image/jpeg', 0.85));
         };
         img.src = dataUrl;
